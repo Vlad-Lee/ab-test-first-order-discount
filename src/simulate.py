@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 
 
-###################################################################################################
+# ── Base Data ─────────────────────────────────────────────────────────────────
+
 def generate_base_data(
     n_users: int = 10_000,
     base_rate: float = 0.27,
@@ -56,7 +57,8 @@ def generate_base_data(
     })
 
 
-###################################################################################################
+# ── Novelty Effect ────────────────────────────────────────────────────────────
+
 def apply_novelty_effect(
     df: pd.DataFrame,
     base_rate: float = 0.27,
@@ -101,7 +103,8 @@ def apply_novelty_effect(
     return pd.concat(weekly_frames, ignore_index=True)
 
 
-###################################################################################################
+# ── Contamination ─────────────────────────────────────────────────────────────
+
 def apply_contamination(
     df: pd.DataFrame,
     base_rate: float = 0.27,
@@ -141,7 +144,8 @@ def apply_contamination(
     return df
 
 
-###################################################################################################
+# ── Segment Heterogeneity ─────────────────────────────────────────────────────
+
 def apply_segment_heterogeneity(
     df: pd.DataFrame,
     base_rate: float = 0.27,

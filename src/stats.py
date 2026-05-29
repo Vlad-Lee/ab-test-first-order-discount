@@ -6,14 +6,28 @@ from scipy.stats import chisquare
 from statsmodels.stats.multitest import multipletests
 
 
-###################################################################################################
+# ── Sample Size ───────────────────────────────────────────────────────────────
+
 def calculate_sample_size(
-    base_rate: float = 0.35,
+    base_rate: float = 0.27,
     mde: float = 0.04,
     alpha: float = 0.05,
     power: float = 0.80,
 ) -> int:
-    """Returns users needed per group to detect the MDE at the given alpha and power."""
+    """Returns users needed per group to detect the MDE at the given alpha and power.
+
+    Uses the two-proportion power formula. Both p1 and p2 contribute separate
+    variance terms under H1 (not the pooled approximation used for H0 testing).
+
+    Args:
+        base_rate: Expected retention rate in the control group (e.g. 0.27).
+        mde:       Minimum detectable effect — absolute pp lift (e.g. 0.04 = 4pp).
+        alpha:     Type I error rate (default 0.05 → 95% confidence).
+        power:     1 − Type II error rate (default 0.80 → 80% power).
+
+    Returns:
+        Minimum sample size per group (rounded up to the nearest integer).
+    """
 
     if not 0 < mde < 1:
         raise ValueError("MDE must be between 0 and 1.")
@@ -41,7 +55,8 @@ def calculate_sample_size(
     return math.ceil(numerator / denominator)
 
 
-###################################################################################################
+# ── Proportions Test ──────────────────────────────────────────────────────────
+
 def run_proportions_test(
     conversions_control: int,
     n_control: int,
@@ -49,7 +64,22 @@ def run_proportions_test(
     n_treatment: int,
     alpha: float = 0.05,
 ) -> dict:
-    """Two-sample z-test of proportions. Returns test statistics and CI on the lift."""
+    """Two-sample z-test of proportions. Returns test statistics and CI on the lift.
+
+    Uses a pooled SE for the hypothesis test (H0: p_c == p_t) and an unpooled SE
+    for the confidence interval (which estimates the true difference under H1).
+
+    Args:
+        conversions_control:   Number of retained users in the control group.
+        n_control:             Total users in the control group.
+        conversions_treatment: Number of retained users in the treatment group.
+        n_treatment:           Total users in the treatment group.
+        alpha:                 Significance level (default 0.05).
+
+    Returns:
+        dict with rate_control, rate_treatment, lift_absolute, lift_relative,
+        z_stat, p_value, ci_low, ci_high, significant.
+    """
 
     if n_control == 0 or n_treatment == 0:
         raise ValueError("n_control and n_treatment must be greater than zero.")
@@ -59,7 +89,21 @@ def run_proportions_test(
 
     # Pooled proportion under H0
     pooled_prop = (conversions_control + conversions_treatment) / (n_control + n_treatment)
-    pooled_se = np.sqrt(pooled_prop * (1 - pooled_prop) * (1 / n_control + 1 / n_treatment))
+    pooled_se   = np.sqrt(pooled_prop * (1 - pooled_prop) * (1 / n_control + 1 / n_treatment))
+
+    # Guard: if all users converted or none did, SE = 0 and the test is undefined
+    if pooled_se == 0:
+        return {
+            "rate_control":   p_c,
+            "rate_treatment": p_t,
+            "lift_absolute":  0.0,
+            "lift_relative":  0.0,
+            "z_stat":         0.0,
+            "p_value":        1.0,
+            "ci_low":         0.0,
+            "ci_high":        0.0,
+            "significant":    False,
+        }
 
     z_stat = (p_t - p_c) / pooled_se
     p_value = 2 * (1 - norm.cdf(abs(z_stat)))
@@ -86,17 +130,32 @@ def run_proportions_test(
     }
 
 
-###################################################################################################
+# ── BH Correction ─────────────────────────────────────────────────────────────
+
 def apply_bh_correction(
     p_values: list[float],
     metric_names: list[str],
     alpha: float = 0.05,
 ) -> pd.DataFrame:
-    """Applies Benjamini-Hochberg FDR correction across multiple metrics."""
+    """Applies Benjamini-Hochberg FDR correction across multiple metrics.
+
+    Sorts p-values ascending before passing to multipletests so the BH thresholds
+    (k/m * alpha) align correctly with the rank order.
+
+    Args:
+        p_values:     Raw p-values from each metric's hypothesis test.
+        metric_names: Metric labels aligned 1-to-1 with p_values.
+        alpha:        FDR level (default 0.05).
+
+    Returns:
+        DataFrame with columns: metric, p_raw, p_adjusted, bh_threshold, significant.
+        Sorted by p_raw ascending.
+    """
 
     if len(p_values) != len(metric_names):
         raise ValueError("p_values and metric_names must be the same length.")
 
+    # Sort by p-value so BH thresholds (k/m * alpha) align with rank order
     sorted_pairs = sorted(zip(p_values, metric_names))
 
     m = len(p_values)
@@ -114,13 +173,26 @@ def apply_bh_correction(
     })
 
 
-###################################################################################################
+# ── SRM Check ─────────────────────────────────────────────────────────────────
+
 def check_srm(
     n_control: int,
     n_treatment: int,
     expected_split: float = 0.5,
 ) -> dict:
-    """Detects sample ratio mismatch using a chi-squared goodness-of-fit test."""
+    """Detects sample ratio mismatch using a chi-squared goodness-of-fit test.
+
+    A p-value < 0.01 (conventional threshold) indicates the observed split differs
+    significantly from the expected split — likely a bucketing or logging bug.
+
+    Args:
+        n_control:      Observed users in the control group.
+        n_treatment:    Observed users in the treatment group.
+        expected_split: Expected fraction assigned to treatment (default 0.5).
+
+    Returns:
+        dict with observed/expected splits, chi2_stat, p_value, srm_detected.
+    """
 
     if not 0 < expected_split < 1:
         raise ValueError("expected_split must be between 0 and 1.")
@@ -144,7 +216,8 @@ def check_srm(
     }
 
 
-###################################################################################################
+# ── AA Test ───────────────────────────────────────────────────────────────────
+
 def run_aa_test(
     base_rate: float,
     n_per_group: int,
@@ -152,7 +225,22 @@ def run_aa_test(
     alpha: float = 0.05,
     seed: int = 42,
 ) -> dict:
-    """Simulates AA tests to verify the false positive rate is calibrated to alpha."""
+    """Simulates AA tests to verify the false positive rate is calibrated to alpha.
+
+    Runs n_simulations experiments where both groups are drawn from the same
+    base_rate. The fraction of significant results should be close to alpha.
+    An FPR more than 0.02 away from alpha suggests the test is miscalibrated.
+
+    Args:
+        base_rate:      True retention rate for both groups (no treatment effect).
+        n_per_group:    Sample size per group in each simulated experiment.
+        n_simulations:  Number of AA experiments to run (default 1000).
+        alpha:          Significance level (default 0.05).
+        seed:           Random seed for reproducibility.
+
+    Returns:
+        dict with false_positive_rate, expected_fpr, fpr_in_bounds, and all p_values.
+    """
 
     if not 0 < base_rate < 1:
         raise ValueError("base_rate must be between 0 and 1.")
@@ -181,7 +269,8 @@ def run_aa_test(
     }
 
 
-###################################################################################################
+# ── Revenue Impact ────────────────────────────────────────────────────────────
+
 def calculate_revenue_impact(
     rate_control: float,
     rate_treatment: float,
@@ -190,7 +279,28 @@ def calculate_revenue_impact(
     n_users: int,
     orders_per_retained_user: float = 3.0,
 ) -> dict:
-    """Translates the statistical result into net revenue. Connects the experiment to the ship decision."""
+    """Translates the statistical result into net revenue. Connects the experiment to the ship decision.
+
+    Logic:
+      - Incremental retained users  = (rate_treatment − rate_control) × n_users
+      - Incremental revenue         = retained_users × aov × (orders_per_retained_user − 1)
+        (first order is the discounted one; follow-on orders have no discount)
+      - Discount cost               = discount_amount × n_users × rate_treatment
+        (every retained treatment user received the discount on their first order)
+      - Net revenue impact          = incremental_revenue − discount_cost
+      - Break-even lift             = discount_amount / ((orders_per_retained_user − 1) × aov)
+
+    Args:
+        rate_control:             Retention rate in control group.
+        rate_treatment:           Retention rate in treatment group.
+        aov:                      Average order value ($) for follow-on orders.
+        discount_amount:          Flat discount ($) given on the first order.
+        n_users:                  Number of users in the treatment group.
+        orders_per_retained_user: Expected lifetime orders per retained user (default 3.0).
+
+    Returns:
+        dict with revenue components, per-user figures, breakeven_lift, and roi_positive flag.
+    """
 
     if not 0 < rate_control < 1:
         raise ValueError("rate_control must be between 0 and 1.")
@@ -203,15 +313,15 @@ def calculate_revenue_impact(
     if orders_per_retained_user <= 0:
         raise ValueError("orders_per_retained_user must be greater than zero.")
 
-    # Incremental retained users
+    # Incremental retained users from the discount
     ret_users = (rate_treatment - rate_control) * n_users
     # Revenue from follow-on orders (no discount on subsequent orders)
-    rev_incr = ret_users * aov * (orders_per_retained_user - 1)
+    rev_incr  = ret_users * aov * (orders_per_retained_user - 1)
     # Discount cost applied to all retained treatment users
     cost_disc = discount_amount * n_users * rate_treatment
     # Net revenue impact
     net_rev = rev_incr - cost_disc
-    # Break-even lift: the retention lift needed for net revenue to equal zero
+    # Break-even: lift needed for net revenue = 0
     breakeven_lift = discount_amount / ((orders_per_retained_user - 1) * aov)
 
     return {
