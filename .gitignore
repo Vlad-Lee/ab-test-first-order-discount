@@ -32,6 +32,9 @@ reports/
 *.pdf
 *.html
 
+# Allow app screenshots
+!assets/screenshots/*.png
+
 # OS
 .DS_Store
 Thumbs.db
