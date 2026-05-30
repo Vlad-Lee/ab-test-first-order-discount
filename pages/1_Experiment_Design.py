@@ -7,6 +7,23 @@ render_sidebar()
 
 st.title("Experiment Design")
 
+with st.expander("About this page"):
+    st.markdown("""
+    **What this page answers:** How many users do you need, and how long will the experiment take?
+
+    Before running any experiment you need to commit to a sample size. The two key inputs are the
+    **base retention rate** (what retention looks like today without the discount) and the
+    **minimum detectable effect (MDE)**, the smallest lift you actually care about detecting.
+
+    **Power curve:** Sample size grows exponentially as MDE shrinks. Designing to detect a 1pp lift
+    requires roughly 16× more users than detecting a 4pp lift. This tradeoff is the central tension
+    in experiment design, smaller effects require longer experiments.
+
+    **Duration chart:** Translates sample size into calendar time given your platform's daily new-user
+    volume. The 14 and 30-day reference lines mark typical experiment windows. If your required duration
+    exceeds 30 days, you either need to relax the MDE or accept lower power.
+    """)
+
 required_n = calculate_sample_size(
     st.session_state["base_rate"],
     st.session_state["mde"],

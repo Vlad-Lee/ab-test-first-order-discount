@@ -23,7 +23,7 @@ def plot_power_curve(
 ) -> go.Figure:
     """Line chart showing required sample size per group across a range of MDEs.
 
-    Makes the sample size / sensitivity tradeoff tangible — dragging the MDE
+    Makes the sample size / sensitivity tradeoff tangible - dragging the MDE
     slider down reveals the exponential cost of chasing smaller effects.
     """
 
@@ -64,7 +64,7 @@ def plot_duration_tradeoff(
 ) -> go.Figure:
     """Line chart showing experiment duration in days as a function of daily traffic.
 
-    Connects sample size to calendar time — makes it visible when an experiment
+    Connects sample size to calendar time - makes it visible when an experiment
     is infeasible given the platform's daily new-user volume.
     Reference lines at 14 and 30 days mark typical experiment windows.
     """
@@ -142,7 +142,7 @@ def plot_retention_comparison(
         ),
     ))
 
-    # Lift and p-value — positioned above the top of the error bar
+    # Lift and p-value - positioned above the top of the error bar
     fig.add_annotation(
         x="Treatment",
         y=results["rate_treatment"] + ci_half + 0.015,
@@ -175,7 +175,7 @@ def plot_novelty_effect(
 ) -> go.Figure:
     """Line chart showing mean retention rate by week for control and treatment.
 
-    Makes novelty decay visible — treatment starts inflated in week 1 then
+    Makes novelty decay visible - treatment starts inflated in week 1 then
     converges toward control as the discount loses salience.
     df: output of apply_novelty_effect().
     """
@@ -263,7 +263,7 @@ def plot_segment_effects(
 ) -> go.Figure:
     """Grouped bar chart showing control vs treatment retention by segment.
 
-    Makes heterogeneous treatment effects visible — high price-sensitivity users
+    Makes heterogeneous treatment effects visible - high price-sensitivity users
     respond strongly to the discount while frequent orderers show near-zero lift.
     Drives the targeted vs. full rollout recommendation on Page 3.
     df: output of apply_segment_heterogeneity().

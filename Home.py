@@ -11,5 +11,21 @@ st.set_page_config(
 
 render_sidebar()
 
-st.title("First Order Discount — A/B Test Simulator")
-st.markdown("Use the sidebar to configure parameters. Navigate pages using the left panel.")
+st.title("First Order Discount: A/B Test Simulator")
+
+st.markdown(
+    "A food delivery platform is considering offering a first-order discount to improve "
+    "30-day retention. This simulator models the full experimental workflow, from design "
+    "to statistical analysis to revenue impact. Use the sidebar to configure parameters "
+    "and navigate the pages using the left panel."
+)
+
+st.divider()
+
+st.markdown("""
+| Page | What it covers |
+|---|---|
+| **Experiment Design** | How many users you need and how long the experiment will take |
+| **Simulation Results** | Statistical test, retention chart, novelty decay, revenue impact |
+| **Segment Analysis** | Heterogeneous treatment effects and targeted vs. full rollout recommendation |
+""")

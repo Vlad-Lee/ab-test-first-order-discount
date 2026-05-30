@@ -35,7 +35,7 @@ def generate_base_data(
 
     user_ids = rng.integers(1, 1_000_000, size=n_users)
 
-    # Bernoulli draw for each group — treatment gets the lifted rate
+    # Bernoulli draw for each group - treatment gets the lifted rate
     ret_c = rng.binomial(1, base_rate, size=n_control)
     ret_t = rng.binomial(1, base_rate + treatment_effect, size=n_treat)
 
@@ -43,7 +43,7 @@ def generate_base_data(
     groups   = ["control"] * n_control + ["treatment"] * n_treat
     retained = np.concatenate([ret_c, ret_t])
 
-    # Segment covariates — binned into low/medium/high by apply_segment_heterogeneity
+    # Segment covariates - binned into low/medium/high by apply_segment_heterogeneity
     price_sensitivity = rng.uniform(0, 1, size=n_users)
     order_frequency   = rng.uniform(0, 1, size=n_users)
 
@@ -67,7 +67,7 @@ def apply_novelty_effect(
     decay_rate: float = 0.5,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Simulates novelty effect — treatment retention starts inflated then decays
+    """Simulates novelty effect - treatment retention starts inflated then decays
     toward the true effect over n_weeks. Expands DataFrame to n_users × n_weeks rows."""
 
     if df.empty:
@@ -113,7 +113,7 @@ def apply_contamination(
     partial_effect: float = 0.5,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Simulates leakage — a fraction of control users are exposed to the discount
+    """Simulates leakage - a fraction of control users are exposed to the discount
     and their retention is partially lifted."""
 
     if df.empty:
@@ -152,7 +152,7 @@ def apply_segment_heterogeneity(
     treatment_effect: float = 0.04,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Varies treatment effect by segment — price-sensitive users respond more to the
+    """Varies treatment effect by segment - price-sensitive users respond more to the
     discount, frequent orderers less so. Redraws retained for treatment users only."""
 
     if df.empty:

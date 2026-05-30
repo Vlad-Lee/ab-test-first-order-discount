@@ -7,6 +7,26 @@ render_sidebar()
 
 st.title("Segment Analysis")
 
+with st.expander("About this page"):
+    st.markdown("""
+    **What this page shows:** How the treatment effect varies across user segments, and whether
+    a targeted rollout is more efficient than offering the discount to everyone.
+
+    **Heterogeneous treatment effects:** The average treatment effect (ATE) reported on the
+    Simulation Results page is a single number that masks variation across users. Price-sensitive
+    users respond strongly to the discount. Frequent orderers who would have reordered anyway
+    show near-zero lift. Applying the discount to low-response segments wastes margin without
+    generating meaningful retention gains.
+
+    **Segments:** Users are binned by price sensitivity (low / med / high) and order frequency
+    (low / med / high), producing 9 segment combinations. The lift table shows the treatment minus
+    control retention rate for each segment, sorted from highest to lowest lift.
+
+    **Rollout recommendation:** If the top segment's lift is more than 2× the ATE, a targeted
+    rollout is recommended. Offer the discount only to high-sensitivity / low-frequency users.
+    Otherwise the effects are uniform enough that a full rollout is efficient.
+    """)
+
 # ── Generate data ─────────────────────────────────────────────────────────────
 
 @st.cache_data

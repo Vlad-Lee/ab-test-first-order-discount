@@ -1,13 +1,43 @@
 import streamlit as st
 import numpy as np
 from src.sidebar import render_sidebar
-from src.simulate import generate_base_data, apply_novelty_effect
+from src.simulate import generate_base_data, apply_novelty_effect, apply_contamination
 from src.stats import run_proportions_test, apply_bh_correction, calculate_revenue_impact
 from src.viz import plot_retention_comparison, plot_novelty_effect, plot_revenue_waterfall
 
 render_sidebar()
 
 st.title("Simulation Results")
+
+with st.expander("About this page"):
+    st.markdown("""
+    **What this page shows:** A simulated A/B test using the parameters from the sidebar, with
+    full statistical analysis and a revenue-based ship decision.
+
+    **Statistical test:** We use a two-sample z-test of proportions. A pooled standard error is
+    used for the hypothesis test (assuming equal rates under H₀), and an unpooled standard error
+    is used for the confidence interval (reflecting the true difference under H₁). We use a z-test
+    rather than a t-test because retention is a binary outcome, each user either retained or didn't,
+    so the underlying distribution is binomial, not normal, and the z approximation is appropriate
+    at large sample sizes.
+
+    **Novelty effect:** The treatment line starts inflated in week 1 as users respond to the novelty
+    of the discount, then converges toward its true long-run effect over 4 weeks. Shipping based on
+    week 1 data alone would overestimate the lift.
+
+    **Revenue waterfall:** Statistical significance is a necessary but not sufficient condition for
+    shipping. The discount has a direct cost. If the incremental retention revenue does not exceed
+    the discount cost, the feature is net-negative regardless of the p-value.
+
+    **Multiple metrics (BH correction):** Testing retention, reorder rate, and AOV simultaneously
+    inflates the false positive rate. Benjamini-Hochberg FDR correction controls the expected fraction
+    of false discoveries across all three tests.
+
+    **Leakage / contamination:** If some control users are accidentally exposed to the discount
+    (e.g. through shared household accounts or coupon forwarding), their retention gets partially
+    lifted. This inflates the control rate and makes the treatment look less effective than it is,
+    biasing the observed lift downward. Use the contamination toggle to see this effect live.
+    """)
 
 # ── Generate data ─────────────────────────────────────────────────────────────
 
@@ -20,6 +50,25 @@ df = cached_generate(
     st.session_state["base_rate"],
     st.session_state["treatment_effect"],
 )
+
+# ── Contamination toggle ──────────────────────────────────────────────────────
+
+st.subheader("Leakage / Contamination")
+apply_leakage = st.checkbox("Simulate leakage", value=False)
+if apply_leakage:
+    contamination_rate = st.slider("Contamination rate", 0.01, 0.20, 0.05, 0.01)
+    df = apply_contamination(
+        df,
+        base_rate          = st.session_state["base_rate"],
+        treatment_effect   = st.session_state["treatment_effect"],
+        contamination_rate = contamination_rate,
+    )
+    st.caption(
+        f"{contamination_rate:.0%} of control users were exposed to the discount. "
+        "Watch the lift shrink as the control rate rises."
+    )
+
+st.divider()
 
 df_control   = df[df["group"] == "control"]
 df_treatment = df[df["group"] == "treatment"]
@@ -70,11 +119,11 @@ with right:
 # ── Ship / no-ship verdict ────────────────────────────────────────────────────
 
 if results["significant"] and revenue_results["roi_positive"]:
-    st.success("✓ Ship — statistically significant AND revenue-positive.")
+    st.success("✓ Ship: statistically significant and revenue-positive.")
 elif results["significant"] and not revenue_results["roi_positive"]:
-    st.warning("⚠ No ship — significant lift but discount costs more than it earns.")
+    st.warning("⚠ No ship: significant lift but discount costs more than it earns.")
 else:
-    st.error("✗ No ship — result is not statistically significant.")
+    st.error("✗ No ship: result is not statistically significant.")
 
 st.divider()
 

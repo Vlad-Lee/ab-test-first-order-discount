@@ -21,9 +21,9 @@ def calculate_sample_size(
 
     Args:
         base_rate: Expected retention rate in the control group (e.g. 0.27).
-        mde:       Minimum detectable effect — absolute pp lift (e.g. 0.04 = 4pp).
+        mde:       Minimum detectable effect - absolute pp lift (e.g. 0.04 = 4pp).
         alpha:     Type I error rate (default 0.05 → 95% confidence).
-        power:     1 − Type II error rate (default 0.80 → 80% power).
+        power:     1 - Type II error rate (default 0.80 → 80% power).
 
     Returns:
         Minimum sample size per group (rounded up to the nearest integer).
@@ -183,7 +183,7 @@ def check_srm(
     """Detects sample ratio mismatch using a chi-squared goodness-of-fit test.
 
     A p-value < 0.01 (conventional threshold) indicates the observed split differs
-    significantly from the expected split — likely a bucketing or logging bug.
+    significantly from the expected split - likely a bucketing or logging bug.
 
     Args:
         n_control:      Observed users in the control group.
@@ -282,13 +282,13 @@ def calculate_revenue_impact(
     """Translates the statistical result into net revenue. Connects the experiment to the ship decision.
 
     Logic:
-      - Incremental retained users  = (rate_treatment − rate_control) × n_users
-      - Incremental revenue         = retained_users × aov × (orders_per_retained_user − 1)
+      - Incremental retained users  = (rate_treatment - rate_control) × n_users
+      - Incremental revenue         = retained_users × aov × (orders_per_retained_user - 1)
         (first order is the discounted one; follow-on orders have no discount)
       - Discount cost               = discount_amount × n_users × rate_treatment
         (every retained treatment user received the discount on their first order)
-      - Net revenue impact          = incremental_revenue − discount_cost
-      - Break-even lift             = discount_amount / ((orders_per_retained_user − 1) × aov)
+      - Net revenue impact          = incremental_revenue - discount_cost
+      - Break-even lift             = discount_amount / ((orders_per_retained_user - 1) × aov)
 
     Args:
         rate_control:             Retention rate in control group.
